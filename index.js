@@ -25,31 +25,51 @@ async function run() {
         app.get('/appointments', async (req, res) => {
             const email = req.query.email;
             const date = new Date(req.query.date).toLocaleDateString();
-            console.log(email, date);
-            const query = { email: email,date };
+            const query = { email: email, date };
             const cursor = appointmentsCollection.find(query);
             const appointment = await cursor.toArray();
-            console.log(appointment);
             res.json(appointment);
         });
+        // checking user admin or not amdin
+        app.get('/user/:email',async(req,res) => {
+            const email = req.params.email;
+            const query = {email:email};
+            const user = await usersCollection.findOne(query);
+            let isAdmin = false;
+            if(user?.role === 'admin'){
+                isAdmin=true;
+            }
+            res.json({admin:isAdmin})
+            console.log(isAdmin);
+        })
         // post api
         app.post('/appointments', async (req, res) => {
             const appointment = req.body;
             const result = await appointmentsCollection.insertOne(appointment);
-            console.log(result);
             res.json(result);
         });
         // save all register user to database
-        app.post('/user',async(req,res) => {
+        app.post('/user', async (req, res) => {
             const user = req.body;
-            const filter = {email:user.email};
-            const options = {upsert:true};
-            const updateDoc = {$set:user};
-            const result = await usersCollection.updateOne(filter, updateDoc, options);
-            console.log(result);
+            const result = await usersCollection.insertOne(user);
             res.json(result);
-
-        })
+        });
+        // added one user at one time
+        app.put('/user', async (req, res) => {
+            const user = req.body;
+            const filter = { email: user.email };
+            const options = { upsert: true };
+            const updateDoc = { $set: user };
+            const result = await usersCollection.updateOne(filter, updateDoc, options);
+        });
+        // make admin api
+        app.put('/user/admin', async (req, res) => {
+            const user = req.body;
+            const filter = { email: user.email };
+            const updateDoc = { $set: { role: 'admin' } };
+            const result = await usersCollection.updateOne(filter, updateDoc);
+            res.json(result);
+        });
 
     }
     finally {
