@@ -3,6 +3,7 @@ const express = require('express');
 const app = express();
 require('dotenv').config()
 const cors = require('cors');
+const { query } = require('express');
 const port = process.env.PORT || 5000;
 
 // middleware 
@@ -18,19 +19,36 @@ async function run() {
         await client.connect();
         const database = client.db('doctor-portal2');
         const appointmentsCollection = database.collection('appointments');
-        // get api
-        app.get('/appointments',async(req,res) => {
-            const cursor = appointmentsCollection.find({});
-            const appointment = await cursor.toArray();
-            res.send(appointment);
-        })
+        const usersCollection = database.collection('users');
 
+        // get api
+        app.get('/appointments', async (req, res) => {
+            const email = req.query.email;
+            const date = new Date(req.query.date).toLocaleDateString();
+            console.log(email, date);
+            const query = { email: email,date };
+            const cursor = appointmentsCollection.find(query);
+            const appointment = await cursor.toArray();
+            console.log(appointment);
+            res.json(appointment);
+        });
         // post api
         app.post('/appointments', async (req, res) => {
             const appointment = req.body;
             const result = await appointmentsCollection.insertOne(appointment);
             console.log(result);
             res.json(result);
+        });
+        // save all register user to database
+        app.post('/user',async(req,res) => {
+            const user = req.body;
+            const filter = {email:user.email};
+            const options = {upsert:true};
+            const updateDoc = {$set:user};
+            const result = await usersCollection.updateOne(filter, updateDoc, options);
+            console.log(result);
+            res.json(result);
+
         })
 
     }
